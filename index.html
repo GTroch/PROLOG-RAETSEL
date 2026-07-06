@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PROLOG-Rätsellöser – Burg Wolfsfels</title>
+<style>
+  :root{
+    --bg:#0f1410; --panel:#161d17; --panel2:#1d261e; --line:#31402f;
+    --term:#0b0f0c; --green:#7ee08a; --green-d:#4fbf6a; --amber:#e6b74a;
+    --white:#e8f0e6; --muted:#8fa189; --red:#e5736b; --gold:#d9a441;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; font-family:"Segoe UI",Roboto,Arial,sans-serif; color:var(--white);
+    background:radial-gradient(1100px 500px at 50% -8%,#1c261d,var(--bg)); padding:0 16px 60px}
+  header{text-align:center; padding:34px 10px 6px}
+  h1{font-family:Georgia,serif; margin:0; font-size:2rem; color:var(--gold); text-shadow:0 2px 6px #0008}
+  .sub{color:var(--muted); margin-top:6px; font-style:italic}
+  .wrap{max-width:920px; margin:0 auto}
+  .intro{background:var(--panel2); border:1px solid var(--line); border-radius:10px;
+    padding:12px 18px; margin:20px 0 4px; color:var(--muted); font-size:.92rem}
+  .intro b{color:var(--green)}
+  .tabs{display:flex; gap:8px; justify-content:center; margin:22px 0 8px; flex-wrap:wrap}
+  .tab{background:var(--panel); color:var(--green); border:1px solid var(--line);
+    padding:11px 18px; border-radius:9px 9px 0 0; cursor:pointer; font-weight:600; transition:.2s}
+  .tab:hover{background:var(--panel2)}
+  .tab.active{background:var(--green-d); color:#08130a; border-color:var(--green-d)}
+  .puzzle{display:none; background:var(--panel); border:1px solid var(--line);
+    border-radius:14px; padding:24px; box-shadow:0 12px 40px #0007}
+  .puzzle.active{display:block; animation:fade .35s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  h2{font-family:Georgia,serif; color:var(--gold); margin-top:0}
+  .story{background:var(--panel2); border-left:4px solid var(--gold); padding:12px 16px;
+    border-radius:8px; color:#f1ead6; font-size:.95rem}
+  .kbtitle{margin:20px 0 6px; color:var(--green); font-weight:700; letter-spacing:.4px; font-size:.85rem; text-transform:uppercase}
+  pre.kb{background:var(--term); border:1px solid var(--line); border-radius:10px; padding:16px 18px;
+    overflow-x:auto; font-family:Consolas,"Courier New",monospace; font-size:.86rem; color:#cfe6cf;
+    line-height:1.5; margin:0}
+  pre.kb .cm{color:#6f8a6c; font-style:italic}
+  pre.kb .kw{color:var(--amber)}
+  .qtitle{margin:22px 0 6px; color:var(--gold); font-weight:700; font-size:.85rem; letter-spacing:.4px; text-transform:uppercase}
+  .query{background:var(--term); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin:12px 0;
+    font-family:Consolas,"Courier New",monospace; transition:.25s; position:relative}
+  .query.locked{opacity:.45; filter:grayscale(.3)}
+  .query.locked .runrow input, .query.locked .runrow button{pointer-events:none}
+  .goal{color:var(--muted); font-family:"Segoe UI",Arial,sans-serif; font-size:.9rem; margin-bottom:10px}
+  .goal .lock{color:var(--amber)}
+  .runrow{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  .prompt{color:var(--amber); font-weight:700}
+  .query input{flex:1; min-width:220px; background:#0d130e; border:1px solid var(--line); color:var(--white);
+    font-family:Consolas,"Courier New",monospace; font-size:.9rem; padding:8px 10px; border-radius:7px}
+  .query input:focus{outline:none; border-color:var(--green-d); box-shadow:0 0 0 2px #4fbf6a33}
+  button.run{background:var(--green-d); color:#08130a; border:none; padding:9px 16px; border-radius:7px;
+    font-weight:700; cursor:pointer; font-family:"Segoe UI",Arial,sans-serif}
+  button.run:hover{filter:brightness(1.08)}
+  button.tip{background:transparent; color:var(--amber); border:1px solid var(--line); padding:8px 12px;
+    border-radius:7px; cursor:pointer; font-size:.82rem}
+  button.tip:hover{background:#ffffff0d}
+  .out{margin-top:12px; display:none; white-space:pre-wrap; font-family:Consolas,"Courier New",monospace; font-size:.9rem}
+  .out.show{display:block; animation:fade .3s ease}
+  .out .echo{color:var(--white)}
+  .out .ans{color:var(--green)}
+  .out .false{color:var(--red)}
+  .semi{background:var(--panel2); color:var(--amber); border:1px solid var(--line); border-radius:6px;
+    padding:3px 10px; cursor:pointer; font-family:Consolas,monospace; font-size:.85rem; margin-top:8px}
+  .note{margin-top:10px; padding:10px 14px; background:#16241a; border:1px solid var(--green-d);
+    border-radius:8px; color:#d6efd6; font-family:"Segoe UI",Arial,sans-serif; font-size:.9rem}
+  .note.warn{background:#2a2413; border-color:var(--gold); color:#f0e2c0}
+  .explain{background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:6px 6px 6px 6px}
+  .explain .lead{padding:12px 14px; color:#dbe6d8; font-size:.92rem; line-height:1.55; border-bottom:1px solid var(--line)}
+  .explain .lead b{color:var(--green)}
+  .explain .row{display:flex; gap:12px; padding:12px 14px; border-bottom:1px solid var(--line); align-items:flex-start}
+  .explain .row:last-child{border-bottom:none}
+  .explain code{flex:0 0 auto; min-width:210px; background:var(--term); color:var(--amber);
+    font-family:Consolas,"Courier New",monospace; font-size:.83rem; padding:6px 9px; border-radius:6px; white-space:pre-wrap}
+  .explain .txt{color:#dbe6d8; font-size:.92rem; line-height:1.55}
+  .explain .txt b{color:var(--green)}
+  @media(max-width:620px){.explain .row{flex-direction:column; gap:6px}.explain code{min-width:0}}
+  .shake{animation:shk .3s}
+  @keyframes shk{0%,100%{transform:none}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+  footer{text-align:center; color:var(--muted); margin-top:30px; font-size:.84rem}
+</style>
+</head>
+<body>
+<header>
+  <h1>&#9876; PROLOG-Rätsellöser &#9876;</h1>
+  <div class="sub">Die Rätsel von Burg Wolfsfels – Schritt für Schritt per Anfrage gelöst</div>
+</header>
+
+<div class="wrap">
+  <div class="intro">
+    So funktioniert es: Unten siehst du jeweils die <b>Wissensbasis</b> (Fakten &amp; Regeln). Stelle dann
+    nacheinander die <b>Anfragen</b> an der Konsole <span style="color:var(--amber)">?-</span> . Erst wenn du eine
+    Anfrage eingibst und auf <b>Ausführen</b> klickst, zeigt PROLOG die Teillösung. Mit <b>;</b> blätterst du zu
+    weiteren Lösungen. <span style="color:var(--muted)">(Die Konsole ist eine didaktische Simulation – sie kennt genau die passenden Anfragen.)</span>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="0">&#128014; Pferde-Rätsel</div>
+    <div class="tab" data-tab="1">&#127993; Ritterturnier</div>
+    <div class="tab" data-tab="2">&#127920; An der Tafel</div>
+  </div>
+
+  <div id="mount"></div>
+
+  <footer>Interaktives Lernmaterial &middot; Informatik 13. Klasse &middot; Wissensbasierte Systeme (PROLOG)</footer>
+</div>
+
+<script>
+// ================== DATEN DER DREI RÄTSEL ==================
+const R = String.raw;
+const puzzles = [
+ {
+  title:'Ritt durch die Wälder',
+  story:'Toni, Rob und Lysa reiten je ein schwarzes, braunes oder weißes Pferd. Toni sitzt nicht auf dem schwarzen, Rob nicht auf dem braunen Pferd, und die Person auf dem braunen Pferd ist jünger als Toni.',
+  kb:[
+    ['cm','% Fakten: die drei moeglichen Pferdefarben'],
+    ['','pferd(schwarz).'],
+    ['','pferd(braun).'],
+    ['','pferd(weiss).'],
+    ['',''],
+    ['cm','% Regel: erst jeder Person eine Farbe geben (erzeugen),'],
+    ['cm','% dann alle Bedingungen pruefen (testen)'],
+    ['','loesung(Pferd_Toni, Pferd_Rob, Pferd_Lysa) :-'],
+    ['','    pferd(Pferd_Toni), pferd(Pferd_Rob), pferd(Pferd_Lysa),'],
+    ['','    Pferd_Toni \\= Pferd_Rob, Pferd_Toni \\= Pferd_Lysa, Pferd_Rob \\= Pferd_Lysa,'],
+    ['','    Pferd_Toni \\= schwarz, Pferd_Rob \\= braun, Pferd_Toni \\= braun.']
+  ],
+  queries:[
+    {goal:'Löse das Rätsel: Welche Farbe reitet jede Person?',
+     expect:'loesung(Pferd_Toni, Pferd_Rob, Pferd_Lysa).',
+     multi:false,
+     answers:['Pferd_Toni = weiss,\nPferd_Rob = schwarz,\nPferd_Lysa = braun.'],
+     note:'Eindeutige Lösung: Toni reitet weiß, Rob schwarz, Lysa braun.'}
+  ],
+  explain:
+    '<div class="lead">Die Regel folgt dem klassischen Muster <b>„erzeugen und testen"</b> (generate &amp; test): Zuerst bekommt jede Person eine Farbe, danach werden alle Bedingungen geprüft. Nur Belegungen, die <i>jede</i> Bedingung erfüllen, überstehen den Test – übrig bleibt genau eine.</div>'
+    + '<div class="row"><code>pferd(schwarz).\npferd(braun).\npferd(weiss).</code><div class="txt"><b>Fakten – der Wertevorrat.</b> Sie legen die einzigen erlaubten Pferdefarben fest. Jede Variable kann später nur mit schwarz, braun oder weiss belegt werden.</div></div>'
+    + '<div class="row"><code>pferd(Pferd_Toni),\npferd(Pferd_Rob),\npferd(Pferd_Lysa)</code><div class="txt"><b>Erzeugen.</b> Jede der drei Personen erhält eine Farbe aus dem Vorrat. PROLOG probiert dabei systematisch alle Kombinationen durch und liefert für jede Variable nacheinander mögliche Werte.</div></div>'
+    + '<div class="row"><code>Pferd_Toni \\= Pferd_Rob,\nPferd_Toni \\= Pferd_Lysa,\nPferd_Rob \\= Pferd_Lysa</code><div class="txt"><b>Alle Farben verschieden.</b> Es gibt nur drei Pferde – jede Person muss eine andere Farbe reiten. Das Zeichen \\= bedeutet „ist ungleich" und schließt mit diesen drei paarweisen Vergleichen jede doppelte Belegung aus.</div></div>'
+    + '<div class="row"><code>Pferd_Toni \\= schwarz</code><div class="txt"><b>Hinweis 1:</b> „Toni sitzt nicht auf dem schwarzen Pferd." Diese Bedingung verbietet für Toni die Farbe schwarz.</div></div>'
+    + '<div class="row"><code>Pferd_Rob \\= braun</code><div class="txt"><b>Hinweis 2:</b> „Rob sitzt nicht auf dem braunen Pferd." Diese Bedingung verbietet für Rob die Farbe braun.</div></div>'
+    + '<div class="row"><code>Pferd_Toni \\= braun</code><div class="txt"><b>Hinweis 3 (versteckt):</b> „Die Person auf dem braunen Pferd ist jünger als Toni." Da niemand jünger ist als er selbst, kann Toni nicht auf dem braunen Pferd sitzen – deshalb wird auch braun für Toni ausgeschlossen.</div></div>'
+    + '<div class="row"><code>?- loesung(Pferd_Toni,\n          Pferd_Rob,\n          Pferd_Lysa).</code><div class="txt"><b>Das Ergebnis.</b> Aus Hinweis 1 und 3 ist Toni weder schwarz noch braun &rarr; <b>Pferd_Toni = weiss</b>. Braun bleibt dann nur für Lysa (Rob darf nicht braun) &rarr; <b>Pferd_Lysa = braun</b>, und für Rob bleibt <b>schwarz</b>. Genau diese eindeutige Belegung erfüllt alle Bedingungen und wird von der Anfrage zurückgegeben.</div></div>'
+ },
+ {
+  title:'Training für das Ritterturnier',
+  story:'Je ein Junge (Toni, Rob, John, Paul) und ein Mädchen (Lysa, Minna, Anna, Vreni) üben zusammen eine Disziplin. Lysa: Schwertkampf; Minna mit Rob; Anna nicht mit Bruder John; Paul: Bogen; John: Lanze.',
+  kb:[
+    ['cm','% Fakten: Jungen, Maedchen, Disziplinen, Geschwister'],
+    ['','junge(toni). junge(rob). junge(john). junge(paul).'],
+    ['','maedchen(lysa). maedchen(minna). maedchen(anna). maedchen(vreni).'],
+    ['','disziplin(schwertkampf). disziplin(bogenschiessen).'],
+    ['','disziplin(lanzenstechen). disziplin(zweikampf).'],
+    ['','geschwister(john, anna).'],
+    ['',''],
+    ['cm','% Regel: jedem Jungen ein Maedchen und eine Disziplin geben'],
+    ['cm','% (erzeugen) und danach alle Hinweise pruefen (testen)'],
+    ['','loesung(Maedchen_Toni, Maedchen_Rob, Maedchen_John, Maedchen_Paul,'],
+    ['','        Disziplin_Toni, Disziplin_Rob, Disziplin_John, Disziplin_Paul) :-'],
+    ['','    maedchen(Maedchen_Toni), maedchen(Maedchen_Rob),'],
+    ['','    maedchen(Maedchen_John), maedchen(Maedchen_Paul),'],
+    ['','    Maedchen_Toni \\= Maedchen_Rob,  Maedchen_Toni \\= Maedchen_John,'],
+    ['','    Maedchen_Toni \\= Maedchen_Paul, Maedchen_Rob  \\= Maedchen_John,'],
+    ['','    Maedchen_Rob  \\= Maedchen_Paul, Maedchen_John \\= Maedchen_Paul,'],
+    ['','    disziplin(Disziplin_Toni), disziplin(Disziplin_Rob),'],
+    ['','    disziplin(Disziplin_John), disziplin(Disziplin_Paul),'],
+    ['','    Disziplin_Toni \\= Disziplin_Rob,  Disziplin_Toni \\= Disziplin_John,'],
+    ['','    Disziplin_Toni \\= Disziplin_Paul, Disziplin_Rob  \\= Disziplin_John,'],
+    ['','    Disziplin_Rob  \\= Disziplin_Paul, Disziplin_John \\= Disziplin_Paul,'],
+    ['','    Maedchen_Rob = minna,            % Hinweis 2: Minna uebt mit Rob'],
+    ['','    Disziplin_Paul = bogenschiessen, % Hinweis 4: Paul Bogenschiessen'],
+    ['','    Disziplin_John = lanzenstechen,  % Hinweis 5: John Lanzenstechen'],
+    ['','    Maedchen_John \\= anna,           % Hinweis 3: Anna nicht mit John'],
+    ['cm','    % Hinweis 1: Lysa uebt Schwertkampf'],
+    ['','    ( Maedchen_Toni = lysa, Disziplin_Toni = schwertkampf'],
+    ['','    ; Maedchen_Rob  = lysa, Disziplin_Rob  = schwertkampf'],
+    ['','    ; Maedchen_John = lysa, Disziplin_John = schwertkampf'],
+    ['','    ; Maedchen_Paul = lysa, Disziplin_Paul = schwertkampf ).']
+  ],
+  queries:[
+    {goal:'Löse das Rätsel: Wer übt mit wem welche Disziplin?',
+     expect:'loesung(Maedchen_Toni, Maedchen_Rob, Maedchen_John, Maedchen_Paul, Disziplin_Toni, Disziplin_Rob, Disziplin_John, Disziplin_Paul).',
+     multi:false,
+     answers:['Maedchen_Toni = lysa,\nMaedchen_Rob = minna,\nMaedchen_John = vreni,\nMaedchen_Paul = anna,\nDisziplin_Toni = schwertkampf,\nDisziplin_Rob = zweikampf,\nDisziplin_John = lanzenstechen,\nDisziplin_Paul = bogenschiessen.'],
+     note:'Eindeutige Lösung: Toni & Lysa – Schwertkampf, Rob & Minna – Zweikampf, John & Vreni – Lanzenstechen, Paul & Anna – Bogenschießen.'}
+  ],
+  explain:
+    '<div class="lead">Diese Lösung ist <b>genau wie das Pferde-Rätsel</b> aufgebaut: benannte Variablen als Argumente – eine je Unbekannter – und das Muster <b>„erzeugen und testen"</b>. Der einzige Unterschied: Jeder Junge hat <i>zwei</i> Unbekannte – sein Mädchen und seine Disziplin – daher acht Variablen statt drei.</div>'
+    + '<div class="row"><code>junge(...). maedchen(...).\ndisziplin(...).\ngeschwister(john, anna).</code><div class="txt"><b>Alle Fakten zuerst.</b> Die vier Jungen, die vier Mädchen, die vier Disziplinen und die Geschwister-Tatsache John–Anna bilden den Wertevorrat, aus dem PROLOG später schöpft.</div></div>'
+    + '<div class="row"><code>loesung(Maedchen_Toni, ...,\n        Disziplin_Toni, ...) :-</code><div class="txt"><b>Der Regelkopf mit acht Argumenten.</b> Genau wie beim Pferde-Rätsel (<code>loesung(Pferd_Toni, Pferd_Rob, Pferd_Lysa)</code>) steht jede Unbekannte als eigene benannte Variable im Kopf: das Mädchen und die Disziplin jedes Jungen. Die Anfrage fragt genau diese acht Variablen ab und bekommt für jede einen Wert zurück.</div></div>'
+    + '<div class="row"><code>maedchen(Maedchen_Toni), ...\nMaedchen_Toni \\= Maedchen_Rob,\n... , Maedchen_John \\= Maedchen_Paul</code><div class="txt"><b>Mädchen erzeugen &amp; alle verschieden.</b> Jedem Jungen wird ein Mädchen aus dem Vorrat zugewiesen (erzeugen). Die sechs paarweisen Ungleichungen <code>\\=</code> sorgen dafür, dass kein Mädchen doppelt vorkommt – exakt wie die drei Ungleichungen der Pferdefarben, nur mit vier statt drei Werten.</div></div>'
+    + '<div class="row"><code>disziplin(Disziplin_Toni), ...\nDisziplin_Toni \\= Disziplin_Rob,\n... , Disziplin_John \\= Disziplin_Paul</code><div class="txt"><b>Disziplinen erzeugen &amp; alle verschieden.</b> Dasselbe für die Disziplinen: jeder Junge bekommt eine, und die Ungleichungen verhindern Dopplungen.</div></div>'
+    + '<div class="row"><code>Maedchen_Rob = minna,\nDisziplin_Paul = bogenschiessen,\nDisziplin_John = lanzenstechen</code><div class="txt"><b>Drei direkte Hinweise (testen).</b> Rob übt mit Minna (Hinweis 2), Paul macht Bogenschießen (Hinweis 4), John Lanzenstechen (Hinweis 5). Diese Gleichungen setzen die jeweilige Variable sofort fest – so wie <code>Pferd_Toni \\= schwarz</code> im Pferde-Rätsel eine Farbe ausschloss, schließen sie hier alle anderen Werte aus.</div></div>'
+    + '<div class="row"><code>Maedchen_John \\= anna</code><div class="txt"><b>Hinweis 3.</b> „Anna will nicht mit ihrem Bruder John üben." Johns Mädchen darf also nicht Anna sein.</div></div>'
+    + '<div class="row"><code>( Maedchen_Toni = lysa,\n  Disziplin_Toni = schwertkampf\n; Maedchen_Rob = lysa,\n  Disziplin_Rob = schwertkampf\n; ... )</code><div class="txt"><b>Hinweis 1.</b> „Lysa übt Schwertkampf." Weil anfangs offen ist, welcher Junge mit Lysa übt, prüft das <b>Oder</b> (Semikolon <b>;</b>) alle vier Fälle: Der Junge, dessen Mädchen Lysa ist, muss die Disziplin Schwertkampf haben.</div></div>'
+    + '<div class="row"><code>?- loesung(Maedchen_Toni, ...,\n          Disziplin_Paul).</code><div class="txt"><b>Das Ergebnis.</b> Rob = Minna, Paul = Bogen, John = Lanze sind fest. Lysa passt nur zu Toni (Rob hat Minna; Pauls Bogen und Johns Lanze sind nicht Schwert), also <b>Maedchen_Toni = lysa, Disziplin_Toni = schwertkampf</b>. Für John bleibt als Mädchen Vreni (Anna ausgeschlossen), Anna geht zu Paul, und für Rob bleibt der <b>Zweikampf</b>. PROLOG gibt für jede der acht Variablen genau einen Wert zurück – wie beim Pferde-Rätsel.</div></div>'
+ },
+ {
+  title:'An der großen Tafel',
+  story:'Toni, Rob, John, Paul sitzen in dieser Reihenfolge nebeneinander. Roter Wams = Schwert; Paul = Bogen; Rob neben dem Lanzenkämpfer; blauer Wams neben dem Bogenschützen; der Zweikämpfer nicht neben dem Bogenschützen.',
+  kb:[
+    ['cm','% Fakten: Jungen und Disziplinen'],
+    ['','junge(toni). junge(rob). junge(john). junge(paul).'],
+    ['','disziplin(schwertkampf). disziplin(bogenschiessen).'],
+    ['','disziplin(lanzenstechen). disziplin(zweikampf).'],
+    ['',''],
+    ['cm','% Sitzordnung (kommutativ, beide Richtungen)'],
+    ['','neben(toni,rob). neben(rob,toni).'],
+    ['','neben(rob,john). neben(john,rob).'],
+    ['','neben(john,paul). neben(paul,john).'],
+    ['',''],
+    ['cm','% Regel: jedem Jungen eine Disziplin geben (erzeugen),'],
+    ['cm','% dann Hinweise und Wams pruefen (testen)'],
+    ['','loesung(Disziplin_Toni, Disziplin_Rob, Disziplin_John, Disziplin_Paul,'],
+    ['','        Wams_Toni, Wams_Rob, Wams_John, Wams_Paul) :-'],
+    ['','    disziplin(Disziplin_Toni), disziplin(Disziplin_Rob),'],
+    ['','    disziplin(Disziplin_John), disziplin(Disziplin_Paul),'],
+    ['','    Disziplin_Toni \\= Disziplin_Rob,  Disziplin_Toni \\= Disziplin_John,'],
+    ['','    Disziplin_Toni \\= Disziplin_Paul, Disziplin_Rob  \\= Disziplin_John,'],
+    ['','    Disziplin_Rob  \\= Disziplin_Paul, Disziplin_John \\= Disziplin_Paul,'],
+    ['','    Disziplin_Paul = bogenschiessen,   % Paul war Bogenschiessen'],
+    ['cm','    % Hinweis 1: der rote Wams kaempfte mit dem Schwert'],
+    ['','    ( Disziplin_Toni = schwertkampf, Wams_Toni = rot'],
+    ['','    ; Disziplin_Rob  = schwertkampf, Wams_Rob  = rot'],
+    ['','    ; Disziplin_John = schwertkampf, Wams_John = rot'],
+    ['','    ; Disziplin_Paul = schwertkampf, Wams_Paul = rot ),'],
+    ['cm','    % Hinweis 4: der blaue Wams sitzt neben dem Bogenschuetzen'],
+    ['','    ( Wams_Toni = blau, neben(toni, paul)'],
+    ['','    ; Wams_Rob  = blau, neben(rob, paul)'],
+    ['','    ; Wams_John = blau, neben(john, paul)'],
+    ['','    ; Wams_Paul = blau, neben(paul, paul) ),'],
+    ['cm','    % Hinweis 3: Rob sitzt neben dem Lanzenkaempfer'],
+    ['','    ( Disziplin_Toni = lanzenstechen, neben(rob, toni)'],
+    ['','    ; Disziplin_Rob  = lanzenstechen, neben(rob, rob)'],
+    ['','    ; Disziplin_John = lanzenstechen, neben(rob, john)'],
+    ['','    ; Disziplin_Paul = lanzenstechen, neben(rob, paul) ),'],
+    ['cm','    % Hinweis 5: der Zweikaempfer sitzt nicht neben dem Bogenschuetzen'],
+    ['','    ( Disziplin_Toni = zweikampf, \\+ neben(toni, paul)'],
+    ['','    ; Disziplin_Rob  = zweikampf, \\+ neben(rob, paul)'],
+    ['','    ; Disziplin_John = zweikampf, \\+ neben(john, paul)'],
+    ['','    ; Disziplin_Paul = zweikampf, \\+ neben(paul, paul) ).']
+  ],
+  queries:[
+    {goal:'Löse das Rätsel: Disziplin und Wams jedes Jungen (mit ; alle Lösungen).',
+     expect:'loesung(Disziplin_Toni, Disziplin_Rob, Disziplin_John, Disziplin_Paul, Wams_Toni, Wams_Rob, Wams_John, Wams_Paul).',
+     multi:true,
+     answers:[
+       'Disziplin_Toni = schwertkampf,\nDisziplin_Rob = zweikampf,\nDisziplin_John = lanzenstechen,\nDisziplin_Paul = bogenschiessen,\nWams_Toni = rot,  Wams_John = blau,\nWams_Rob = _G1,  Wams_Paul = _G2',
+       'Disziplin_Toni = zweikampf,\nDisziplin_Rob = schwertkampf,\nDisziplin_John = lanzenstechen,\nDisziplin_Paul = bogenschiessen,\nWams_Rob = rot,  Wams_John = blau,\nWams_Toni = _G1,  Wams_Paul = _G2'
+     ],
+     note:'Zwei Lösungen! Fest bestimmt sind Paul = Bogenschießen und John = Lanzenstechen (blaues Wams). Toni und Rob tauschen jedoch Schwertkampf und Zweikampf (der Schwertkämpfer trägt rot) – die Hinweise unterscheiden sie nicht. Das Rätsel ist NICHT eindeutig. Die frei bleibenden Wams zeigt PROLOG als ungebundene Variablen (_G1, _G2).',
+     warn:true}
+  ],
+  explain:
+    '<div class="lead">Aufbau <b>genau wie beim Pferde- und Ritterturnier-Rätsel</b>: benannte Variablen und „erzeugen und testen". Jeder Junge hat zwei Unbekannte – seine Disziplin und sein Wams – also acht Argumente. Neu ist nur, dass hier <b>zwei</b> Lösungen herauskommen.</div>'
+    + '<div class="row"><code>junge(...). disziplin(...).\nneben(toni,rob). neben(rob,toni).\n... (beide Richtungen)</code><div class="txt"><b>Alle Fakten zuerst.</b> Die Jungen, die Disziplinen und die Sitzordnung. Weil „neben" kommutativ ist, steht jede Nachbarschaft in beiden Richtungen als Fakt.</div></div>'
+    + '<div class="row"><code>loesung(Disziplin_Toni, ...,\n        Wams_Toni, ...) :-</code><div class="txt"><b>Der Regelkopf mit acht Argumenten.</b> Jede Unbekannte ist eine eigene benannte Variable: die Disziplin und das Wams jedes Jungen. Die Anfrage fragt genau diese acht Variablen ab.</div></div>'
+    + '<div class="row"><code>disziplin(Disziplin_Toni), ...\nDisziplin_Toni \\= Disziplin_Rob,\n... , Disziplin_John \\= Disziplin_Paul</code><div class="txt"><b>Disziplinen erzeugen &amp; alle verschieden.</b> Jeder Junge bekommt eine Disziplin aus dem Vorrat; die sechs Ungleichungen verhindern Dopplungen – wie die Farb-Ungleichungen beim Pferde-Rätsel.</div></div>'
+    + '<div class="row"><code>Disziplin_Paul = bogenschiessen</code><div class="txt"><b>Direkter Hinweis.</b> „Paul war Bogenschießen" legt Pauls Disziplin sofort fest.</div></div>'
+    + '<div class="row"><code>( Disziplin_Toni = schwertkampf,\n  Wams_Toni = rot ; ... )</code><div class="txt"><b>Hinweis 1 – roter Wams &rarr; Schwert.</b> Das <b>Oder</b> (<b>;</b>) sucht den Jungen, der Schwertkampf übt, und gibt ihm das rote Wams. So verbindet die Regel Disziplin und Wams.</div></div>'
+    + '<div class="row"><code>( Wams_John = blau,\n  neben(john, paul) ; ... )</code><div class="txt"><b>Hinweis 4 – blauer Wams neben dem Bogenschützen.</b> Das <b>Oder</b> sucht einen Jungen, der neben Paul sitzt, und gibt ihm Blau. Da nur John neben Paul sitzt, wird <b>Wams_John = blau</b>. Weil Rot und Blau verschiedene Jungen sind, kann John damit nicht der Schwertkämpfer sein.</div></div>'
+    + '<div class="row"><code>( Disziplin_? = lanzenstechen,\n  neben(rob, ?) ; ... )</code><div class="txt"><b>Hinweis 3 – Rob neben dem Lanzenkämpfer.</b> Der Lanzenkämpfer muss ein Nachbar von Rob sein.</div></div>'
+    + '<div class="row"><code>( Disziplin_? = zweikampf,\n  \\+ neben(?, paul) ; ... )</code><div class="txt"><b>Hinweis 5 – Zweikämpfer nicht neben dem Bogenschützen.</b> <code>\\+</code> heißt „nicht": der Zweikämpfer darf nicht neben Paul sitzen. Da John neben Paul sitzt, ist John kein Zweikämpfer.</div></div>'
+    + '<div class="row"><code>?- loesung(Disziplin_Toni, ...).</code><div class="txt"><b>Das Ergebnis – zwei Lösungen.</b> Aus den Hinweisen folgt zwingend <b>John = Lanzenstechen (blau)</b> und <b>Paul = Bogenschießen</b>. Für Toni und Rob bleiben Schwertkampf und Zweikampf – beide Reihenfolgen erfüllen alle Bedingungen (keiner sitzt neben Paul). Deshalb liefert PROLOG mit <b>;</b> zwei Lösungen und dann <b>false</b>. Das Rätsel ist <b>nicht eindeutig</b> – anders als die beiden vorherigen.</div></div>'
+ }
+];
+
+// ================== AUFBAU DER SEITE ==================
+function norm(s){return (s||'').trim().toLowerCase().replace(/\s+/g,'').replace(/\.$/,'');}
+
+const mount = document.getElementById('mount');
+puzzles.forEach((p,pi)=>{
+  const sec = document.createElement('section');
+  sec.className = 'puzzle' + (pi===0?' active':'');
+  sec.id = 'p'+pi;
+
+  // KB rendern
+  let kbHtml='';
+  p.kb.forEach(([cls,txt])=>{
+    const safe = txt.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    kbHtml += cls==='cm' ? '<span class="cm">'+safe+'</span>\n' : safe+'\n';
+  });
+
+  let qHtml='';
+  p.queries.forEach((q,qi)=>{
+    const locked = qi>0 ? ' locked' : '';
+    const lockTxt = qi>0 ? '<span class="lock">&#128274; </span>' : '';
+    qHtml += `
+      <div class="query${locked}" id="q-${pi}-${qi}">
+        <div class="goal">${lockTxt}${q.goal}</div>
+        <div class="runrow">
+          <span class="prompt">?-</span>
+          <input type="text" placeholder="${q.expect.replace(/"/g,'&quot;')}" data-p="${pi}" data-q="${qi}">
+          <button class="run" data-p="${pi}" data-q="${qi}">Ausführen</button>
+          <button class="tip" data-p="${pi}" data-q="${qi}">Tipp</button>
+        </div>
+        <div class="out" id="out-${pi}-${qi}"></div>
+      </div>`;
+  });
+
+  const explainHtml = p.explain
+    ? `<div class="qtitle">Warum diese Anweisungen? – Zeile für Zeile</div><div class="explain">${p.explain}</div>`
+    : '';
+
+  sec.innerHTML = `
+    <h2>${p.title}</h2>
+    <div class="story">${p.story}</div>
+    <div class="kbtitle">Wissensbasis</div>
+    <pre class="kb">${kbHtml}</pre>
+    <div class="qtitle">Konsole – stelle die Anfragen der Reihe nach</div>
+    ${qHtml}
+    ${explainHtml}`;
+  mount.appendChild(sec);
+});
+
+// ================== INTERAKTION ==================
+// Tabs
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.puzzle').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('p'+t.dataset.tab).classList.add('active');
+  });
+});
+
+// Tipp: Anfrage ins Eingabefeld schreiben
+document.querySelectorAll('button.tip').forEach(b=>{
+  b.addEventListener('click',()=>{
+    const pi=+b.dataset.p, qi=+b.dataset.q;
+    if(document.getElementById('q-'+pi+'-'+qi).classList.contains('locked')) return;
+    const inp=document.querySelector('input[data-p="'+pi+'"][data-q="'+qi+'"]');
+    inp.value = puzzles[pi].queries[qi].expect;
+    inp.focus();
+  });
+});
+
+// Ausführen
+function runQuery(pi,qi){
+  const box = document.getElementById('q-'+pi+'-'+qi);
+  if(box.classList.contains('locked')) return;
+  const inp = document.querySelector('input[data-p="'+pi+'"][data-q="'+qi+'"]');
+  const out = document.getElementById('out-'+pi+'-'+qi);
+  const q = puzzles[pi].queries[qi];
+
+  if(norm(inp.value)===''){ box.classList.add('shake'); setTimeout(()=>box.classList.remove('shake'),300); return; }
+
+  if(norm(inp.value)!==norm(q.expect)){
+    // Falsche/andere Anfrage -> PROLOG meldet false.
+    out.innerHTML = '<span class="echo">?- '+inp.value.replace(/</g,'&lt;')+'</span>\n<span class="false">false.</span>'
+      + '\n<span style="color:var(--muted)">Tipp nutzen, um die passende Anfrage einzusetzen.</span>';
+    out.classList.add('show');
+    box.classList.add('shake'); setTimeout(()=>box.classList.remove('shake'),300);
+    return;
+  }
+
+  // Korrekte Anfrage -> Lösung(en) anzeigen
+  let idx = 0;
+  const render = ()=>{
+    let html = '<span class="echo">?- '+q.expect+'</span>\n';
+    for(let k=0;k<=idx;k++){
+      const suffix = q.multi ? ' ;' : '';
+      html += '<span class="ans">'+q.answers[k].replace(/</g,'&lt;')+suffix+'</span>\n';
+    }
+    // wenn alle multi-Lösungen gezeigt: false. + weiter-Button entfernen
+    const moreLeft = q.multi && idx < q.answers.length-1;
+    if(q.multi && !moreLeft){ html += '<span class="false">false.</span>\n'; }
+    out.innerHTML = html;
+    out.classList.add('show');
+
+    if(moreLeft){
+      const btn=document.createElement('button');
+      btn.className='semi'; btn.textContent='; nächste Lösung';
+      btn.addEventListener('click',()=>{ idx++; render(); });
+      out.appendChild(btn);
+    } else {
+      // Notiz + nächste Anfrage freischalten
+      const n=document.createElement('div');
+      n.className='note'+(q.warn?' warn':'');
+      n.innerHTML=q.note;
+      out.appendChild(n);
+      unlockNext(pi,qi);
+    }
+  };
+  render();
+}
+
+function unlockNext(pi,qi){
+  const next=document.getElementById('q-'+pi+'-'+(qi+1));
+  if(next){
+    next.classList.remove('locked');
+    const g=next.querySelector('.goal .lock'); if(g) g.remove();
+  }
+}
+
+document.querySelectorAll('button.run').forEach(b=>{
+  b.addEventListener('click',()=>runQuery(+b.dataset.p,+b.dataset.q));
+});
+document.querySelectorAll('.query input').forEach(inp=>{
+  inp.addEventListener('keydown',e=>{ if(e.key==='Enter') runQuery(+inp.dataset.p,+inp.dataset.q); });
+});
+</script>
+</body>
+</html>
